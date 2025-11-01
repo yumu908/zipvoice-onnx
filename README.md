@@ -4,8 +4,8 @@ ZipVoice ONNX is a library for performing text-to-speech synthesis using the Zip
 
 ## Installation
 
-```bash
-pip install zipvoice-onnx
+```console
+uv pip install zipvoice-onnx
 ```
 
 ## Usage
