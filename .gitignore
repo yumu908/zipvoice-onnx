@@ -20,3 +20,4 @@ audio.wav
 .DS_Store
 model_distilled/
 model_vocos/
+*.onnx
