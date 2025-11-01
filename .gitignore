@@ -15,3 +15,6 @@ model_heb/
 model_vocos/
 infer_zipvoice_onnx_minimal.py
 audio.wav
+*.zip
+*.wav
+.DS_Store
