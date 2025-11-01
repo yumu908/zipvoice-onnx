@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Model files
+model/
+model_heb/
+model_vocos/
+infer_zipvoice_onnx_minimal.py
+audio.wav
