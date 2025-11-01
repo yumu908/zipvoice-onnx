@@ -5,6 +5,13 @@ import librosa
 from pathlib import Path
 
 
+def rms_norm(prompt_wav: np.ndarray, target_rms: float):
+    prompt_rms = np.sqrt(np.mean(np.square(prompt_wav)))
+    if prompt_rms < target_rms:
+        prompt_wav = prompt_wav * target_rms / prompt_rms
+    return prompt_wav, prompt_rms
+
+
 def hann_window(n: int) -> np.ndarray:
     if n < 2:
         return np.ones(n, dtype=np.float32)

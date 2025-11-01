@@ -3,10 +3,10 @@ from typing import Tuple
 import json
 import numpy as np
 
-from .model import OnnxModel
-from .vocoder import get_vocoder, VocosFbank
+from .model import OnnxModel, sample
+from .vocoder import get_vocoder, VocosFbank, rms_norm
 from .tokenizer import Tokenizer
-from .utils import load_prompt_wav, rms_norm, sample
+from .utils import load_prompt_wav
 
 
 @dataclass
