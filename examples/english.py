@@ -22,6 +22,8 @@ wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/mel_spec_24
 wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/config.yaml -O ./model_vocos/config.yaml
 
 
+wget https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/prompt_english_female1.wav
+
 uv run examples/english.py
 """
 
@@ -30,23 +32,23 @@ from zipvoice_onnx import ZipVoice, ZipVoiceOptions
 
 # Example usage with zipvoice_distill model
 options = ZipVoiceOptions(
-    text_encoder_path="./model_distilled/text_encoder.onnx",
-    fm_decoder_path="./model_distilled/fm_decoder.onnx",
-    text_encoder_int8_path="./model_distilled/text_encoder_int8.onnx",
-    fm_decoder_int8_path="./model_distilled/fm_decoder_int8.onnx",
-    model_json_path="./model_distilled/model.json",
-    tokens_path="./model_distilled/tokens.txt",
+    text_encoder_path="./model/text_encoder.onnx",
+    fm_decoder_path="./model/fm_decoder.onnx",
+    text_encoder_int8_path="./model/text_encoder_int8.onnx",
+    fm_decoder_int8_path="./model/fm_decoder_int8.onnx",
+    model_json_path="./model/model.json",
+    tokens_path="./model/tokens.txt",
     vocos_model_path="./model_vocos/mel_spec_24khz.onnx",
 )
 
 zipvoice = ZipVoice(options)
 
 # Example usage
-ref_wav = "prompt.wav"
-ref_phonemes = "halˈaχti lamakˈolet liknˈot lˈeχem veχalˈav, ubadˈeʁeχ paɡˈaʃti χavˈeʁ jaʃˈan ʃelˈo ʁaʔˈiti haʁbˈe zmˈan."
-target_phonemes = "halˈaχti lamakˈolet liknˈot lˈeχem veχalˈav, ubadˈeʁeχ paɡˈaʃti χavˈeʁ jaʃˈan ʃelˈo ʁaʔˈiti haʁbˈe zmˈan."
+ref_wav = "prompt_english_female1.wav"
+ref_phonemes = "ɪn ˈɔɹdəɹ tə wˈɪn, ju mˈʌst ɪkspˈɛkt tə wˈɪn."
+target_phonemes = "ðə mˈOst tˌɛknəlˈɑʤəkᵊli əfˈɪʃənt məʃˈin ðæt mˈæn hæz ˈɛvəɹ ɪnvˈɛntᵻd ɪz ðə bˈʊk."
 
-samples, sample_rate = zipvoice.create(ref_wav, ref_phonemes, target_phonemes, num_steps=32)
+samples, sample_rate = zipvoice.create(ref_wav, ref_phonemes, target_phonemes)
 print(f"Generated audio: {samples.shape} samples at {sample_rate} Hz")
 
 sf.write("audio.wav", samples, sample_rate)

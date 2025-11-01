@@ -27,7 +27,7 @@ ref_wav = "prompt.wav"
 ref_phonemes = "halˈaχti lamakˈolet liknˈot lˈeχem veχalˈav, ubadˈeʁeχ paɡˈaʃti χavˈeʁ jaʃˈan ʃelˈo ʁaʔˈiti haʁbˈe zmˈan."
 target_phonemes = "halˈaχti lamakˈolet liknˈot lˈeχem veχalˈav, ubadˈeʁeχ paɡˈaʃti χavˈeʁ jaʃˈan ʃelˈo ʁaʔˈiti haʁbˈe zmˈan."
 
-samples, sample_rate = zipvoice.create(ref_wav, ref_phonemes, target_phonemes, num_steps=16)
+samples, sample_rate = zipvoice.create(ref_wav, ref_phonemes, target_phonemes)
 print(f"Generated audio: {samples.shape} samples at {sample_rate} Hz")
 
 sf.write("audio.wav", samples, sample_rate)

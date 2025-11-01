@@ -18,3 +18,5 @@ audio.wav
 *.zip
 *.wav
 .DS_Store
+model_distilled/
+model_vocos/
