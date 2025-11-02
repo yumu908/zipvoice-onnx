@@ -17,10 +17,6 @@ wget https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/fm_dec
 wget https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/model.json -O ./model_distilled/model.json
 wget https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/tokens.txt -O ./model_distilled/tokens.txt
 
-mkdir -p ./model_vocos
-wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/mel_spec_24khz.onnx -O ./model_vocos/mel_spec_24khz.onnx
-wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/config.yaml -O ./model_vocos/config.yaml
-
 
 wget https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/prompt_english_female2.wav
 
@@ -45,7 +41,6 @@ options = ZipVoiceOptions(
     fm_decoder_int8_path="./model/fm_decoder_int8.onnx",
     model_json_path="./model/model.json",
     tokens_path="./model/tokens.txt",
-    vocos_model_path="./model_vocos/mel_spec_24khz.onnx",
 )
 
 zipvoice = ZipVoice(options)

@@ -1,8 +1,4 @@
 """
-mkdir -p ./model_vocos
-wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/mel_spec_24khz.onnx -O ./model_vocos/mel_spec_24khz.onnx
-wget https://huggingface.co/wetdog/vocos-mel-24khz-onnx/resolve/main/config.yaml -O ./model_vocos/config.yaml
-
 uv run examples/hebrew.py
 """
 
@@ -17,7 +13,6 @@ options = ZipVoiceOptions(
     fm_decoder_int8_path="./model_heb/fm_decoder_int8.onnx",
     model_json_path="./model_heb/model.json",
     tokens_path="./model_heb/tokens.txt",
-    vocos_model_path="./model_vocos/mel_spec_24khz.onnx",
 )
 
 zipvoice = ZipVoice(options)

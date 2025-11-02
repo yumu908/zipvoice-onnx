@@ -1,25 +1,26 @@
+from typing import List, Tuple
+
 import numpy as np
 import onnxruntime as ort
+import torch
+from torch import Tensor
 
-
-def get_time_steps(
-    t_start: float = 0.0,
-    t_end: float = 1.0,
-    num_step: int = 10,
-    t_shift: float = 1.0,
-) -> np.ndarray:
-    timesteps = np.linspace(t_start, t_end, num_step + 1, dtype=np.float32)
-    timesteps = (t_shift * timesteps / (1 + (t_shift - 1) * timesteps)).astype(np.float32)
-    return timesteps
+from .utils import get_time_steps
 
 
 class OnnxModel:
-    def __init__(self, text_encoder_path: str, fm_decoder_path: str, num_thread: int = 1):
+    def __init__(
+        self,
+        text_encoder_path: str,
+        fm_decoder_path: str,
+        num_thread: int = 1,
+    ):
         session_opts = ort.SessionOptions()
         session_opts.inter_op_num_threads = num_thread
         session_opts.intra_op_num_threads = num_thread
 
         self.session_opts = session_opts
+
         self.init_text_encoder(text_encoder_path)
         self.init_fm_decoder(fm_decoder_path)
 
@@ -39,72 +40,111 @@ class OnnxModel:
         meta = self.fm_decoder.get_modelmeta().custom_metadata_map
         self.feat_dim = int(meta["feat_dim"])
 
-    def run_text_encoder(self, tokens: np.ndarray, prompt_tokens: np.ndarray, 
-                        prompt_features_len: np.ndarray, speed: np.ndarray) -> np.ndarray:
+    def run_text_encoder(
+        self,
+        tokens: Tensor,
+        prompt_tokens: Tensor,
+        prompt_features_len: Tensor,
+        speed: Tensor,
+    ) -> Tuple[Tensor, Tensor]:
         out = self.text_encoder.run(
-            [self.text_encoder.get_outputs()[0].name],
+            [
+                self.text_encoder.get_outputs()[0].name,
+            ],
             {
-                self.text_encoder.get_inputs()[0].name: tokens,
-                self.text_encoder.get_inputs()[1].name: prompt_tokens,
-                self.text_encoder.get_inputs()[2].name: prompt_features_len,
-                self.text_encoder.get_inputs()[3].name: speed,
+                self.text_encoder.get_inputs()[0].name: tokens.numpy(),
+                self.text_encoder.get_inputs()[1].name: prompt_tokens.numpy(),
+                self.text_encoder.get_inputs()[2].name: prompt_features_len.numpy(),
+                self.text_encoder.get_inputs()[3].name: speed.numpy(),
             },
         )
-        return out[0]
+        return torch.from_numpy(out[0])
 
-    def run_fm_decoder(self, t: np.ndarray, x: np.ndarray, text_condition: np.ndarray,
-                      speech_condition: np.ndarray, guidance_scale: np.ndarray) -> np.ndarray:
+    def run_fm_decoder(
+        self,
+        t: Tensor,
+        x: Tensor,
+        text_condition: Tensor,
+        speech_condition: torch.Tensor,
+        guidance_scale: Tensor,
+    ) -> Tensor:
         out = self.fm_decoder.run(
-            [self.fm_decoder.get_outputs()[0].name],
+            [
+                self.fm_decoder.get_outputs()[0].name,
+            ],
             {
-                self.fm_decoder.get_inputs()[0].name: t,
-                self.fm_decoder.get_inputs()[1].name: x,
-                self.fm_decoder.get_inputs()[2].name: text_condition,
-                self.fm_decoder.get_inputs()[3].name: speech_condition,
-                self.fm_decoder.get_inputs()[4].name: guidance_scale,
+                self.fm_decoder.get_inputs()[0].name: t.numpy(),
+                self.fm_decoder.get_inputs()[1].name: x.numpy(),
+                self.fm_decoder.get_inputs()[2].name: text_condition.numpy(),
+                self.fm_decoder.get_inputs()[3].name: speech_condition.numpy(),
+                self.fm_decoder.get_inputs()[4].name: guidance_scale.numpy(),
             },
         )
-        return out[0]
+        return torch.from_numpy(out[0])
 
 
-def sample(model: OnnxModel, tokens: list, prompt_tokens: list, 
-          prompt_features: np.ndarray, speed: float = 1.0, t_shift: float = 0.5,
-          guidance_scale: float = 1.0, num_step: int = 16) -> np.ndarray:
-    tokens = np.array([tokens], dtype=np.int64)
-    prompt_tokens = np.array([prompt_tokens], dtype=np.int64)
-    prompt_features_len = np.array([prompt_features.shape[1]], dtype=np.int64)
-    speed_tensor = np.array([speed], dtype=np.float32)
+def sample(
+    model: OnnxModel,
+    tokens: List[List[int]],
+    prompt_tokens: List[List[int]],
+    prompt_features: Tensor,
+    speed: float = 1.0,
+    t_shift: float = 0.5,
+    guidance_scale: float = 1.0,
+    num_step: int = 16,
+) -> torch.Tensor:
+    """
+    Generate acoustic features, given text tokens, prompts feature and prompt
+    transcription's text tokens.
+
+    Args:
+        tokens: a list of list of text tokens.
+        prompt_tokens: a list of list of prompt tokens.
+        prompt_features: the prompt feature with the shape
+            (batch_size, seq_len, feat_dim).
+        speed : speed control.
+        t_shift: time shift.
+        guidance_scale: the guidance scale for classifier-free guidance.
+        num_step: the number of steps to use in the ODE solver.
+    """
+    # Run text encoder
+    assert len(tokens) == len(prompt_tokens) == 1
+    tokens = torch.tensor(tokens, dtype=torch.int64)
+    prompt_tokens = torch.tensor(prompt_tokens, dtype=torch.int64)
+    prompt_features_len = torch.tensor(prompt_features.size(1), dtype=torch.int64)
+    speed = torch.tensor(speed, dtype=torch.float32)
 
     text_condition = model.run_text_encoder(
-        tokens, prompt_tokens, prompt_features_len, speed_tensor
+        tokens, prompt_tokens, prompt_features_len, speed
     )
 
     batch_size, num_frames, _ = text_condition.shape
+    assert batch_size == 1
     feat_dim = model.feat_dim
 
+    # Run flow matching model
     timesteps = get_time_steps(
-        t_start=0.0, t_end=1.0, num_step=num_step, t_shift=t_shift
+        t_start=0.0,
+        t_end=1.0,
+        num_step=num_step,
+        t_shift=t_shift,
     )
-    np.random.seed(666)
-    x = np.random.randn(batch_size, num_frames, feat_dim).astype(np.float32)
-    
-    pad_width = ((0, 0), (0, num_frames - prompt_features.shape[1]), (0, 0))
-    speech_condition = np.pad(prompt_features, pad_width, mode='constant').astype(np.float32)
-    
-    guidance_scale_tensor = np.array(guidance_scale, dtype=np.float32)
+    x = torch.randn(batch_size, num_frames, feat_dim)
+    speech_condition = torch.nn.functional.pad(
+        prompt_features, (0, 0, 0, num_frames - prompt_features.shape[1])
+    )  # (B, T, F)
+    guidance_scale = torch.tensor(guidance_scale, dtype=torch.float32)
 
     for step in range(num_step):
-        t_step = np.array(timesteps[step], dtype=np.float32)
-        dt_step = np.float32(timesteps[step + 1] - timesteps[step])
         v = model.run_fm_decoder(
-            t=t_step,
+            t=timesteps[step],
             x=x,
             text_condition=text_condition,
             speech_condition=speech_condition,
-            guidance_scale=guidance_scale_tensor,
+            guidance_scale=guidance_scale,
         )
-        x = (x + v * dt_step).astype(np.float32)
+        x = x + v * (timesteps[step + 1] - timesteps[step])
 
-    x = x[:, prompt_features_len[0]:, :]
+    x = x[:, prompt_features_len.item() :, :]
     return x
 
