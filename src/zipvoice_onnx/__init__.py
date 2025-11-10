@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from lhotse.utils import fix_random_seed
 from typing import List
+from dataclasses import field
 
 from .model import OnnxModel, sample
 from .vocoder import get_vocoder, VocosFbank, rms_norm
@@ -28,7 +29,7 @@ class ZipVoiceOptions:
     model_json_path: str = ""
     tokens_path: str = ""
     vocos_model_path: Optional[str] = None
-    onnx_providers: List[str] = ["CPUExecutionProvider"]
+    onnx_providers: List[str] = field(default_factory=lambda: ["CPUExecutionProvider"])
 
 
 class ZipVoice:
