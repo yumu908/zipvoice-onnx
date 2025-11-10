@@ -14,12 +14,14 @@ class OnnxModel:
         text_encoder_path: str,
         fm_decoder_path: str,
         num_thread: int = 1,
+        onnx_providers: List[str] = ["CPUExecutionProvider"],
     ):
         session_opts = ort.SessionOptions()
         session_opts.inter_op_num_threads = num_thread
         session_opts.intra_op_num_threads = num_thread
 
         self.session_opts = session_opts
+        self.onnx_providers = onnx_providers
 
         self.init_text_encoder(text_encoder_path)
         self.init_fm_decoder(fm_decoder_path)
@@ -28,14 +30,14 @@ class OnnxModel:
         self.text_encoder = ort.InferenceSession(
             model_path,
             sess_options=self.session_opts,
-            providers=["CPUExecutionProvider"],
+            providers=self.onnx_providers,
         )
 
     def init_fm_decoder(self, model_path: str):
         self.fm_decoder = ort.InferenceSession(
             model_path,
             sess_options=self.session_opts,
-            providers=["CPUExecutionProvider"],
+            providers=self.onnx_providers,
         )
         meta = self.fm_decoder.get_modelmeta().custom_metadata_map
         self.feat_dim = int(meta["feat_dim"])

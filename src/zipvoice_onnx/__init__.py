@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import torch
 from lhotse.utils import fix_random_seed
+from typing import List
 
 from .model import OnnxModel, sample
 from .vocoder import get_vocoder, VocosFbank, rms_norm
@@ -27,6 +28,7 @@ class ZipVoiceOptions:
     model_json_path: str = ""
     tokens_path: str = ""
     vocos_model_path: Optional[str] = None
+    onnx_providers: List[str] = ["CPUExecutionProvider"]
 
 
 class ZipVoice:
@@ -75,7 +77,7 @@ class ZipVoice:
             }
         
         # Initialize model
-        self.model = OnnxModel(str(text_encoder_path), str(fm_decoder_path), num_thread=num_thread)
+        self.model = OnnxModel(str(text_encoder_path), str(fm_decoder_path), num_thread=num_thread, onnx_providers=options.onnx_providers)
         
         # Initialize vocoder and feature extractor
         self.vocoder = get_vocoder(options.vocos_model_path)
