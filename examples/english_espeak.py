@@ -122,7 +122,7 @@ zipvoice = ZipVoice(options)
 # Example usage
 ref_wav = "prompt_english_female1.wav"
 ref_text = "In order to win, you must expect to win."
-target_text = "the most technological aspect of the book."
+target_text = "Here is a description of a snowstorm in the vast desert"
 ref_phonemes = phonemize(text=ref_text, language="en-us", backend="espeak")
 target_phonemes = phonemize(text=target_text, language="en-us", backend="espeak")
 
