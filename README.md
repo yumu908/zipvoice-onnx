@@ -1,6 +1,4 @@
-![Uploading image.png…]()
-
-
+<img width="1831" height="1707" alt="image" src="https://github.com/user-attachments/assets/212f330f-f519-418b-929a-392ce5bea797" />
 
 # ZipVoice ONNX
 
