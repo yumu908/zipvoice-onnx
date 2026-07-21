@@ -1,14 +1,16 @@
-# Ensure we are in the project root
+@echo off
+:: -------------------------------------------------
+:: �� ����ԴĿ¼����� cuDNN ��װĿ¼����Ŀ�� CUDA Ŀ¼
+:: -------------------------------------------------
+set CUDNN_ROOT=C:\Program Files\NVIDIA\CUDNN\v9.24
+set CUDA_ROOT=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.8
 
-# Create the folder (no‑op if it already exists)
-mkdir model-en-distilled
-
-# Distilled model files
-curl -L -o model-en-distilled/text_encoder_int8.onnx    https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/text_encoder_int8.onnx
-curl -L -o model-en-distilled/fm_decoder_int8.onnx     https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/fm_decoder_int8.onnx
-curl -L -o model-en-distilled/model.json               https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/model.json
-curl -L -o model-en-distilled/tokens.txt               https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/tokens.txt
-
-# Vocoder and prompt audio
-curl -L -o vocos_24khz.onnx https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/vocos_24khz.onnx
-curl -L -o prompt_english_female1.wav https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/prompt_english_female1.wav
+:: -------------------------------------------------
+:: �� ���� bin��include��lib\x64 ������Ŀ¼
+:: -------------------------------------------------
+echo ���ڸ��� cuDNN bin��include��lib �� CUDA Ŀ¼ ...
+xcopy /e /i /y "%CUDNN_ROOT%\bin"   "%CUDA_ROOT%\bin"   > nul
+xcopy /e /i /y "%CUDNN_ROOT%\include" "%CUDA_ROOT%\include" > nul
+xcopy /e /i /y "%CUDNN_ROOT%\lib\x64" "%CUDA_ROOT%\lib\x64" > nul
+echo ������ɡ�
+pause

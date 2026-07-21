@@ -29,8 +29,9 @@ class OnnxModel:
         fm_decoder_path: str,
         num_thread: int = 1,
         onnx_providers: List[str] = ["CPUExecutionProvider"],
+        session_options: ort.SessionOptions | None = None,
     ):
-        self.session_opts = get_ort_session_options(num_thread)
+        self.session_opts = session_options if session_options is not None else get_ort_session_options(num_thread)
         self.onnx_providers = onnx_providers
 
         self.init_text_encoder(text_encoder_path)

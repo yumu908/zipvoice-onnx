@@ -25,6 +25,12 @@ dependencies = [
     "umap-learn",
     "phonemizer-fork",
     "espeakng-loader",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "pypinyin",
+    "websockets",
+    "openai-whisper",
 ]
 
 [build-system]

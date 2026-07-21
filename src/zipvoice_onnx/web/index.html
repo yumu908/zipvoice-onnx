@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZipVoice ONNX Studio</title>
+    <!-- Google Fonts Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-glow bg-glow-secondary"></div>
+    
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-wand-magic-sparkles logo-icon"></i>
+                <div class="logo-text">
+                    <h1>ZipVoice <span>ONNX</span></h1>
+                    <p>Zero-Shot Voice Cloning & TTS Studio</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <a href="/docs" target="_blank" class="docs-btn" title="Open FastAPI Interactive Swagger API Documentation">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>API Docs</span>
+                </a>
+                <span class="status-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="engine-status">Checking engine...</span>
+                </span>
+                <span class="provider-badge">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>ONNX Runtime</span>
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="app-grid">
+            <!-- Left Side: Voice & Parameters -->
+            <section class="grid-card config-card">
+                <div class="card-header">
+                    <i class="fa-solid fa-sliders"></i>
+                    <h2>Voice Configuration</h2>
+                </div>
+                
+                <!-- Voice Select -->
+                <div class="form-group">
+                    <label for="voice-select">
+                        <span>Reference Voice</span>
+                        <i class="fa-solid fa-circle-info" title="Select a system voice or upload your own to clone."></i>
+                    </label>
+                    <div class="select-row">
+                        <div class="select-wrapper">
+                            <select id="voice-select">
+                                <option value="" disabled selected>Loading voices...</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                        <button id="ref-play-btn" class="ref-control-btn" title="Preview selected reference voice" disabled>
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Voice Upload -->
+                <div class="form-group">
+                    <label>Clone New Voice</label>
+                    <div id="drop-zone" class="upload-dropzone">
+                        <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        <p class="upload-primary">Drag & drop reference WAV</p>
+                        <p class="upload-secondary">or click to browse local files</p>
+                        <input type="file" id="file-input" accept=".wav" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Reference Transcript -->
+                <div class="form-group">
+                    <label for="ref-text-input">
+                        <span>Reference Text (Optional)</span>
+                        <i class="fa-solid fa-circle-info" title="Provide exact text of the reference voice for higher fidelity. System defaults are used if empty."></i>
+                    </label>
+                    <div class="input-with-btn">
+                        <input type="text" id="ref-text-input" placeholder="e.g. In order to win, you must expect to win." />
+                        <button id="ref-recognize-btn" class="input-btn" title="Auto transcribe voice using Whisper" disabled>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Auto</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Inference Sliders -->
+                <div class="sliders-section">
+                    <h3>Parameters</h3>
+                    
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Speed</span>
+                            <span class="value-display" id="speed-val">1.00</span>
+                        </div>
+                        <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.05" value="1.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Inference Steps</span>
+                            <span class="value-display" id="steps-val">4</span>
+                        </div>
+                        <input type="range" id="steps-slider" min="1" max="20" step="1" value="4">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Guidance Scale</span>
+                            <span class="value-display" id="guidance-val">1.0</span>
+                        </div>
+                        <input type="range" id="guidance-slider" min="0.5" max="3.0" step="0.1" value="1.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>t_shift</span>
+                            <span class="value-display" id="tshift-val">0.5</span>
+                        </div>
+                        <input type="range" id="tshift-slider" min="0.1" max="1.0" step="0.05" value="0.5">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Speech Generation -->
+            <section class="grid-card generator-card">
+                <div class="card-header">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <h2>Speech Synthesis</h2>
+                </div>
+
+                <!-- Presets and Language -->
+                <div class="generator-toolbar">
+                    <div class="lang-tabs">
+                        <button class="lang-tab active" data-lang="zh">
+                            <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1e8-1f1f3.png" alt="CN">
+                            Chinese
+                        </button>
+                        <button class="lang-tab" data-lang="en">
+                            <img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f1fa-1f1f8.png" alt="US">
+                            English
+                        </button>
+                    </div>
+
+                    <div class="preset-group">
+                        <span>Presets:</span>
+                        <div id="presets-container">
+                            <!-- Presets injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Text -->
+                <div class="form-group text-input-group">
+                    <label for="target-text">Target Text to Synthesize</label>
+                    <textarea id="target-text" placeholder="Type text here to synthesize..."></textarea>
+                    <div class="char-count"><span id="char-count-val">0</span> chars</div>
+                </div>
+
+                <!-- Generation Modes -->
+                <div class="mode-selector">
+                    <div class="mode-option active" data-mode="non-stream">
+                        <i class="fa-solid fa-file-audio"></i>
+                        <div class="mode-info">
+                            <h4>HTTP Standard</h4>
+                            <p>Full audio file delivery</p>
+                        </div>
+                    </div>
+                    <div class="mode-option" data-mode="stream">
+                        <i class="fa-solid fa-arrow-down-short-wide"></i>
+                        <div class="mode-info">
+                            <h4>HTTP Streaming</h4>
+                            <p>Chunked sentence streaming</p>
+                        </div>
+                    </div>
+                    <div class="mode-option" data-mode="websocket">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <div class="mode-info">
+                            <h4>WebSocket Live</h4>
+                            <p>Real-time duplex connection</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button id="generate-btn" class="glow-btn">
+                    <span class="btn-text">Generate Speech</span>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+
+                <!-- Custom Audio Player & Visualizer -->
+                <div class="player-container">
+                    <div class="visualizer-wrapper">
+                        <canvas id="visualizer"></canvas>
+                        <div class="visualizer-overlay" id="visualizer-idle-msg">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <span>Audio waveform visualizer</span>
+                        </div>
+                    </div>
+                    <div class="custom-audio-controls">
+                        <button id="play-pause-btn" class="control-btn" disabled>
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-time" id="current-time">0:00</div>
+                            <div class="progress-track" id="progress-track">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <div class="progress-time" id="total-time">0:00</div>
+                        </div>
+                        <a id="download-audio-btn" class="control-btn" href="#" download="synthesized.wav" title="Download Audio" style="display: none;">
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Execution Terminal Logs -->
+                <div class="console-wrapper">
+                    <div class="console-header">
+                        <span><i class="fa-solid fa-terminal"></i> Live Engine Logs</span>
+                        <button id="clear-console-btn" title="Clear logs"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div id="console-logs" class="console-logs">
+                        <div class="log-line system-msg">System ready. Select a voice and mode, then press Generate.</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for playback -->
+    <audio id="audio-player"></audio>
+    <audio id="ref-audio-player"></audio>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import json
 import logging
 import random
 import numpy as np
+import onnxruntime as ort
 
 from .model import OnnxModel, sample
 from .vocoder import OnnxVocoder, VocosFbank, rms_norm
@@ -25,7 +26,7 @@ class ZipVoiceOptions:
 
 
 class ZipVoice:
-    def __init__(self, options: ZipVoiceOptions, num_thread: int = 4, seed: int = 666):
+    def __init__(self, options: ZipVoiceOptions, num_thread: int = 4, seed: int = 666, session_options: ort.SessionOptions | None = None):
         self.options = options
         self.num_thread = num_thread
         self.seed = seed
@@ -63,8 +64,8 @@ class ZipVoice:
                 }
             }
 
-        self.model = OnnxModel(str(text_encoder_path), str(fm_decoder_path), num_thread=num_thread, onnx_providers=options.onnx_providers)
-        self.vocoder = OnnxVocoder(options.vocoder_path, num_thread=num_thread, onnx_providers=options.onnx_providers)
+        self.model = OnnxModel(str(text_encoder_path), str(fm_decoder_path), num_thread=num_thread, onnx_providers=options.onnx_providers, session_options=session_options)
+        self.vocoder = OnnxVocoder(options.vocoder_path, num_thread=num_thread, onnx_providers=options.onnx_providers, session_options=session_options)
 
         if self.model_config["feature"]["type"] == "vocos":
             self.feature_extractor = VocosFbank()

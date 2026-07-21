@@ -42,7 +42,7 @@ options = ZipVoiceOptions(
 zipvoice = ZipVoice(options)
 
 # Example usage
-ref_wav = "prompt_english_female1.wav"
+ref_wav = "examples/audio/prompt_english_female1.wav"
 ref_phonemes = "ɪn ˈɔɹdəɹ tə wˈɪn, ju mˈʌst ɪkspˈɛkt tə wˈɪn."
 target_phonemes = "ðə mˈOst tˌɛknəlˈɑʤəkᵊli əfˈɪʃənt məʃˈin ðæt mˈæn hæz ˈɛvəɹ ɪnvˈɛntᵻd ɪz ðə bˈʊk."
 

@@ -11,7 +11,7 @@ $downloads = @(
     @{Url = "https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/model.json"; Out = "model-en-distilled\model.json"},
     @{Url = "https://huggingface.co/k2-fsa/ZipVoice/resolve/main/zipvoice_distill/tokens.txt"; Out = "model-en-distilled\tokens.txt"},
     @{Url = "https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/vocos_24khz.onnx"; Out = "vocos_24khz.onnx"},
-    @{Url = "https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/prompt_english_female1.wav"; Out = "prompt_english_female1.wav"}
+    @{Url = "https://github.com/thewh1teagle/zipvoice-onnx/releases/download/model-files-v1.0/prompt_english_female1.wav"; Out = "examples\audio\prompt_english_female1.wav"}
 )
 
 foreach ($item in $downloads) {

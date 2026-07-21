@@ -94,20 +94,22 @@ if __name__ == "__main__":
         model_json_path=os.path.join(model_dir, "model.json"),
         tokens_path=os.path.join(model_dir, "tokens.txt"),
         vocoder_path="./vocos_24khz.onnx",
-        # Only CPU is guaranteed to be present on this machine
-        onnx_providers=["CPUExecutionProvider"],
+        onnx_providers=["TensorrtExecutionProvider"],
     )
 
-    zipvoice = ZipVoice(options)
+    sess_opts = ort.SessionOptions()
+    sess_opts.add_session_config_entry("session.disable_memcpy_transformer", "1")
+    zipvoice = ZipVoice(options, session_options=sess_opts)
 
     # -----------------------------------------------------------------------
     # Reference audio & text (speaker)
     # -----------------------------------------------------------------------
-    ref_wav = "prompt_english_female1.wav"
+    ref_wav = "examples/audio/prompt_english_female1.wav"
     ref_text = "In order to win, you must expect to win."
     ref_phonemes = phonemize(text=ref_text, language="en-us", backend="espeak")
 
     # -----------------------------------------------------------------------
+    
     # Target (long) text – you can replace this with any long paragraph
     # -----------------------------------------------------------------------
     target_text = "There is a sublime, terrifying silence beneath the gale; the shifting sands are quickly buried under a pristine, shifting mantle of frost. The endless ridges of the desert, usually defined by their sweeping curves, are now softened and blurred by the blinding curtain of snow. It is a collision of extremes—the biting cold of the tundra meeting the infinite isolation of the wasteland. Amidst this tempest, the desert feels both ancient and ephemeral, a vast kingdom reclaimed by the fury of the winter wind, where time itself seems to freeze in the heart of the storm."

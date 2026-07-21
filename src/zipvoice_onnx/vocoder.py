@@ -66,8 +66,8 @@ class VocosFbank:
 
 
 class OnnxVocoder:
-    def __init__(self, model_path: str, num_thread: int = 1, onnx_providers: list = ["CPUExecutionProvider"]):
-        sess_opts = get_ort_session_options(num_thread)
+    def __init__(self, model_path: str, num_thread: int = 1, onnx_providers: list = ["CPUExecutionProvider"], session_options: ort.SessionOptions | None = None):
+        sess_opts = session_options if session_options is not None else get_ort_session_options(num_thread)
         self.session = ort.InferenceSession(model_path, sess_options=sess_opts, providers=onnx_providers)
 
         meta = self.session.get_modelmeta().custom_metadata_map

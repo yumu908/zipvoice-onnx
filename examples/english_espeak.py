@@ -115,14 +115,18 @@ options = ZipVoiceOptions(
     model_json_path="./model/model.json",
     tokens_path="./model/tokens.txt",
     vocoder_path="./vocos_24khz.onnx",
+    # 若 CUDA 不可用会自动回退 CPU。
+    onnx_providers=["CUDAExecutionProvider"],
 )
 
 zipvoice = ZipVoice(options)
 
 # Example usage
-ref_wav = "prompt_english_female1.wav"
+ref_wav = "examples/audio/prompt_english_female1.wav"
 ref_text = "In order to win, you must expect to win."
-target_text = "Here is a description of a snowstorm in the vast desert"
+
+target_text = "There is a sublime, terrifying silence beneath the gale; the shifting sands are quickly buried under a pristine, shifting mantle of frost. The endless ridges of the desert, usually defined by their sweeping curves, are now softened and blurred by the blinding curtain of snow. It is a collision of extremes—the biting cold of the tundra meeting the infinite isolation of the wasteland. Amidst this tempest, the desert feels both ancient and ephemeral, a vast kingdom reclaimed by the fury of the winter wind, where time itself seems to freeze in the heart of the storm."
+
 ref_phonemes = phonemize(text=ref_text, language="en-us", backend="espeak")
 target_phonemes = phonemize(text=target_text, language="en-us", backend="espeak")
 
