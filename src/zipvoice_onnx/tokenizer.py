@@ -41,6 +41,9 @@ class Tokenizer:
 
 def chunk_tokens_punctuation(tokens_list: List[str], max_tokens: int = 100) -> List[List[str]]:
     """Split tokens into chunks at punctuation boundaries, each at most max_tokens long."""
+    # Ensure max_tokens never exceeds a safe bound to prevent OOM in self-attention
+    max_tokens = min(max_tokens, 100)
+
     # Split into sentences at punctuation; trailing punctuation/spaces attach to previous sentence
     sentences: List[List[str]] = []
     current: List[str] = []
@@ -56,10 +59,19 @@ def chunk_tokens_punctuation(tokens_list: List[str], max_tokens: int = 100) -> L
     if current:
         sentences.append(current)
 
-    # Merge sentences into chunks up to max_tokens
+    # Merge sentences into chunks up to max_tokens, hard-splitting oversized sentences
     chunks: List[List[str]] = []
     current = []
     for sentence in sentences:
+        # Hard-split single sentences that exceed max_tokens (e.g. long text without punctuation)
+        if len(sentence) > max_tokens:
+            if current:
+                chunks.append(current)
+                current = []
+            for i in range(0, len(sentence), max_tokens):
+                chunks.append(sentence[i : i + max_tokens])
+            continue
+
         if len(current) + len(sentence) <= max_tokens:
             current.extend(sentence)
         else:

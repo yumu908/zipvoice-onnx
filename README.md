@@ -44,7 +44,7 @@ The project includes a FastAPI-powered speech synthesis server and a premium Web
 To start the local development server:
 
 ```console
-uv run python run_server.py
+uv run python app.py
 ```
 
 Once started, the following interfaces are available:
@@ -211,14 +211,14 @@ uv run .\examples\test_interrupt.py
 2. **打包产物**：
    打包完成后，所有包产物都输出到项目根目录下的 `dist/` 目录中：
    * `dist/zipvoice_onnx/`：已混淆的 Python 核心包（包含嵌入其中的 `pyarmor_runtime_000000` 支持模块）及静态 Web UI 资源。
-   * `dist/run_server.py`：启动混淆后服务器的入口脚本（配置为单进程生产模式，默认监听 `7860` 端口）。
+   * `dist/app.py`：启动混淆后服务器的入口脚本（配置为单进程生产模式，默认监听 `7860` 端口）。
 
 ### 运行混淆后的服务器
 
 直接在项目根目录下执行：
 
 ```console
-uv run python dist/run_server.py
+uv run python dist/app.py
 ```
 
 此时，服务器将正常启动运行在端口 `7860` 上，所有的核心推理、分词和路由逻辑均已受到混淆保护，不易被反编译或阅读。

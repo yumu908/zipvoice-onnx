@@ -8,21 +8,24 @@ hiddenimports = []
 datas += collect_data_files('language_tags')
 datas += collect_data_files('g2p_en')
 datas += collect_data_files('pypinyin')
-datas += collect_data_files('whisper')
+tmp_ret = collect_all('sherpa_onnx')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('onnxruntime')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('espeakng_loader')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['D:\\englishApp\\zipvoice-onnx\\dist\\app.py'],
-    pathex=['dist'],
+    pathex=[],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['torch', 'torchvision', 'cv2', 'matplotlib', 'tkinter', 'tabulate'],
     noarchive=False,
     optimize=0,
 )

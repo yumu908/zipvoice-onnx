@@ -16,8 +16,8 @@ if %errorlevel% equ 0 (
 if %errorlevel% equ 0 (
     echo.
     echo [SUCCESS] Package completed successfully!
-    echo [INFO] The packaged files are in: dist\run_server
-    echo [INFO] Run dist\run_server\run_server.exe to start the server.
+    echo [INFO] The packaged files are in: dist\app
+    echo [INFO] Run dist\app\app.exe to start the server.
 ) else (
     echo.
     echo [ERROR] Package build failed. Please check the logs.

@@ -58,33 +58,99 @@ PUNCTUATION_MAP = {
 # Global ZipVoice instance and valid tokens set
 zipvoice: Optional[ZipVoice] = None
 valid_tokens = set()
-whisper_model = None  # Global cache for Whisper ASR model
+zipformer_recognizer = None  # Global cache for Sherpa-ONNX ZipFormer ASR recognizer
+
+def _ensure_sensevoice_model() -> str:
+    """Download Alibaba FunASR SenseVoice Small model (SOTA Chinese & English ASR)."""
+    model_dir = os.path.abspath("./model/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17")
+    model_file = os.path.join(model_dir, "model.int8.onnx")
+    tokens_file = os.path.join(model_dir, "tokens.txt")
+
+    if os.path.exists(model_file) and os.path.exists(tokens_file):
+        return model_dir
+
+    os.makedirs(model_dir, exist_ok=True)
+
+    import tarfile as _tarfile
+
+    tarball_url = (
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/"
+        "asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+    )
+    logger.info(f"Downloading SenseVoice model archive from {tarball_url}...")
+    req = urllib.request.Request(tarball_url, headers={"User-Agent": "Mozilla/5.0"})
+
+    with tempfile.NamedTemporaryFile(suffix=".tar.bz2", delete=False) as tmp:
+        tmp_path = tmp.name
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            shutil.copyfileobj(resp, tmp)
+
+    logger.info("Extracting SenseVoice model files...")
+    with _tarfile.open(tmp_path, "r:bz2") as tar:
+        for member in tar.getmembers():
+            fname = os.path.basename(member.name)
+            if fname in ["model.int8.onnx", "tokens.txt"]:
+                member.name = fname
+                tar.extract(member, model_dir)
+    os.unlink(tmp_path)
+    logger.info("SenseVoice ASR model ready.")
+    return model_dir
+
 
 def transcribe_audio(audio_path: str) -> str:
-    global whisper_model
-    if whisper_model is None:
-        import whisper
-        logger.info("Loading Whisper 'tiny' model for automatic reference text transcription...")
-        whisper_model = whisper.load_model("tiny")
-        logger.info("Whisper model loaded successfully.")
+    global zipformer_recognizer
+    if zipformer_recognizer is None:
+        import sysconfig
+        sp = sysconfig.get_path("purelib")
+        onnx_capi = os.path.join(sp, "onnxruntime", "capi")
+        if os.path.isdir(onnx_capi):
+            try:
+                os.add_dll_directory(onnx_capi)
+            except Exception:
+                pass
+        import sherpa_onnx
+
+        model_dir = _ensure_sensevoice_model()
+        model_file = os.path.join(model_dir, "model.int8.onnx")
+        tokens_file = os.path.join(model_dir, "tokens.txt")
+
+        logger.info("Initializing Sherpa-ONNX SenseVoice ASR model (Chinese/English SOTA)...")
+        zipformer_recognizer = sherpa_onnx.OfflineRecognizer.from_sense_voice(
+            model=model_file,
+            tokens=tokens_file,
+            num_threads=2,
+            use_itn=True,
+            provider="cpu",
+        )
+        logger.info("Sherpa-ONNX SenseVoice model initialized successfully.")
     
     import soundfile as sf
     import librosa
     
+    # ZipFormer memory usage scales with audio length; cap at 15s to prevent OOM.
+    MAX_ASR_SECONDS = 15
+    MAX_ASR_SAMPLES = MAX_ASR_SECONDS * 16000  # at 16kHz after resampling
+
     logger.info(f"Loading reference audio for transcription: {audio_path}")
     audio, sr = sf.read(audio_path)
     if len(audio.shape) > 1:
         audio = audio.mean(axis=1)  # Convert to mono
         
     if sr != 16000:
-        logger.info(f"Resampling reference audio from {sr}Hz to 16000Hz for Whisper...")
+        logger.info(f"Resampling reference audio from {sr}Hz to 16000Hz for ZipFormer...")
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
+
+    # Truncate to prevent excessive memory allocation
+    if len(audio) > MAX_ASR_SAMPLES:
+        logger.info(f"Audio ({len(audio)/16000:.1f}s) exceeds {MAX_ASR_SECONDS}s limit — truncating for ASR.")
+        audio = audio[:MAX_ASR_SAMPLES]
         
-    logger.info("Transcribing reference audio using Whisper...")
-    is_cuda = whisper_model.device.type == "cuda"
-    result = whisper_model.transcribe(audio.astype(np.float32), fp16=is_cuda)
-    text = result["text"].strip()
-    logger.info(f"Whisper transcription result: '{text}'")
+    logger.info("Transcribing reference audio using Sherpa-ONNX ZipFormer...")
+    stream = zipformer_recognizer.create_stream()
+    stream.accept_waveform(16000, audio.astype(np.float32))
+    zipformer_recognizer.decode_stream(stream)
+    text = stream.result.text.strip()
+    logger.info(f"ZipFormer ASR transcription result: '{text}'")
     return text
 
 def _ensure_espeak_data():
@@ -118,11 +184,16 @@ def load_valid_tokens(tokens_file):
                 tokens.add(parts[0])
     return tokens
 
-def chinese_to_zipvoice_tokens(text, valid_tokens):
-    # Replace punctuation
-    for ch_punc, en_punc in PUNCTUATION_MAP.items():
-        text = text.replace(ch_punc, en_punc)
-        
+DIGIT_MAP = {
+    '0': '零', '1': '一', '2': '二', '3': '三', '4': '四',
+    '5': '五', '6': '六', '7': '七', '8': '八', '9': '九',
+}
+
+def num_to_zh(text: str) -> str:
+    """Convert digits to Chinese characters so TTS can pronounce them."""
+    return "".join(DIGIT_MAP.get(ch, ch) for ch in text)
+
+def _single_zh_segment_to_tokens(text: str, valid_tokens: set) -> list:
     pinyins = pypinyin.pinyin(text, style=pypinyin.Style.TONE3, neutral_tone_with_five=True)
     initials_list = ["zh", "ch", "sh", "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "r", "z", "c", "s", "y", "w"]
     
@@ -172,6 +243,41 @@ def chinese_to_zipvoice_tokens(text, valid_tokens):
         else:
             final_token = pinyin_base + tone
             tokens.append(final_token)
+            
+    return tokens
+
+def chinese_to_zipvoice_tokens(text: str, valid_tokens: set) -> list:
+    """Convert mixed Chinese, English, and numbers into valid ZipVoice tokens."""
+    # 1. Replace Chinese punctuation with half-width punctuation
+    for ch_punc, en_punc in PUNCTUATION_MAP.items():
+        text = text.replace(ch_punc, en_punc)
+        
+    # 2. Convert digits to Chinese characters (e.g. '2026' -> '二零二六')
+    text = num_to_zh(text)
+    
+    # 3. Segment by English words vs Chinese/punctuation
+    parts = re.split(r'([a-zA-Z]+)', text)
+    
+    tokens = []
+    for part in parts:
+        if not part:
+            continue
+        if re.match(r'^[a-zA-Z]+$', part):
+            # English word in Chinese text: convert to espeak phonemes
+            try:
+                phonemes = phonemize(part, language="en-us", backend="espeak").strip()
+                for char in phonemes:
+                    if char in valid_tokens:
+                        tokens.append(char)
+            except Exception:
+                # Fallback to single letters
+                for char in part.lower():
+                    if char in valid_tokens:
+                        tokens.append(char)
+        else:
+            # Chinese segment or punctuation
+            sub_tokens = _single_zh_segment_to_tokens(part, valid_tokens)
+            tokens.extend(sub_tokens)
             
     return tokens
 
@@ -240,10 +346,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error ensuring espeak-ng data: {e}")
         
-    # 2. Setup model directories
-    model_dir = resolve_path("model-en-distilled")
+    # 2. Setup model directories (prefer unified 'model' folder)
+    model_dir = resolve_path("model")
     if not os.path.exists(model_dir):
-        model_dir = resolve_path("model")
+        model_dir = resolve_path("model-en-distilled")
     
     # Check if CUDA is available, if not, use INT8 models for CPU speedup
     import onnxruntime as ort
@@ -471,9 +577,9 @@ async def generate_chunks(req: SynthesizeRequest, ref_wav: str, ref_text: str):
         else:
             target_tokens = zipvoice.tokenizer.texts_to_tokens([text_to_phonemes(sentence, "en")])[0]
             
-        token_duration = prompt_duration / (len(prompt_tokens_str) * req.speed)
-        max_tokens = int((25 - prompt_duration) / token_duration)
-        max_tokens = min(max_tokens, 1000)
+        token_duration = prompt_duration / (len(prompt_tokens_str) * req.speed) if len(prompt_tokens_str) > 0 else 0.15
+        calc_max = int((25 - prompt_duration) / token_duration) if token_duration > 0 else 50
+        max_tokens = max(10, min(calc_max, 100))
         
         chunked_tokens_str = chunk_tokens_punctuation(target_tokens, max_tokens=max_tokens)
         chunked_tokens = zipvoice.tokenizer.tokens_to_token_ids(chunked_tokens_str)
@@ -646,6 +752,16 @@ async def ws_synthesize(websocket: WebSocket):
             await websocket.close()
         except:
             pass
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    fav_path = os.path.join(os.path.dirname(__file__), "web", "favicon.ico")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path, media_type="image/x-icon")
+    icon_root = resolve_path("icon.ico")
+    if os.path.exists(icon_root):
+        return FileResponse(icon_root, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 # Serve static web files
 web_dir = os.path.join(os.path.dirname(__file__), "web")

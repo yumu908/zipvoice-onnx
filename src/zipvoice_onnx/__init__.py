@@ -104,10 +104,10 @@ class ZipVoice:
         tokens_str = self.tokenizer.texts_to_tokens([target_phonemes])[0]
         prompt_tokens_str = self.tokenizer.texts_to_tokens([ref_phonemes])[0]
 
-        token_duration = (prompt_wav.shape[-1] / self.sampling_rate) / (len(prompt_tokens_str) * speed)
-        max_tokens = int((25 - prompt_duration) / token_duration)
-        # Clamp to a reasonable upper bound to avoid OOM
-        max_tokens = min(max_tokens, 1000)
+        token_duration = (prompt_wav.shape[-1] / self.sampling_rate) / (len(prompt_tokens_str) * speed) if len(prompt_tokens_str) > 0 else 0.15
+        calc_max = int((25 - prompt_duration) / token_duration) if token_duration > 0 else 50
+        # Clamp to a safe upper bound (max 100 tokens ~ 5-8s per chunk) to avoid attention OOM
+        max_tokens = max(10, min(calc_max, 100))
         chunked_tokens_str = chunk_tokens_punctuation(tokens_str, max_tokens=max_tokens)
 
         chunked_tokens = self.tokenizer.tokens_to_token_ids(chunked_tokens_str)
